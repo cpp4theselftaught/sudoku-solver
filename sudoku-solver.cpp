@@ -15,6 +15,17 @@ struct Position
 {
 	bool candidates[9];
 };
+int convert(Position position)
+{
+	if (count(begin(position.candidates), end(position.candidates), true) == 1)
+	{
+		return distance(begin(position.candidates), find(begin(position.candidates), end(position.candidates), true)) + 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
 Field< Position > convert(Field< int > const &field)
 {
 	Field< Position > retval;
@@ -45,18 +56,6 @@ Field< Position > convert(Field< int > const &field)
 		);
 	return retval;
 }
-int convert(Position position)
-{
-	if (count(begin(position.candidates), end(position.candidates), true) == 1)
-	{
-		return distance(begin(position.candidates), find(begin(position.candidates), end(position.candidates), true)) + 1;
-	}
-	else
-	{
-		return 0;
-	}
-
-}
 Field< int > convert(Field< Position > const &field)
 {
 	Field< int > retval;
@@ -70,13 +69,45 @@ Field< int > convert(Field< Position > const &field)
 	
 	return retval;
 }
+void printField(FILE *out, Field< int > const &field)
+{
+	fprintf(out,
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		  "\t%d %d %d   %d %d %d   %d %d %d\n"
+		, field.values[ 0], field.values[ 1], field.values[ 2], field.values[ 3], field.values[ 4], field.values[ 5], field.values[ 6], field.values[ 7], field.values[ 8]
+		, field.values[ 9], field.values[10], field.values[11], field.values[12], field.values[13], field.values[14], field.values[15], field.values[16], field.values[17]
+		, field.values[18], field.values[19], field.values[20], field.values[21], field.values[22], field.values[23], field.values[24], field.values[25], field.values[26]
+		, field.values[27], field.values[28], field.values[29], field.values[30], field.values[31], field.values[32], field.values[33], field.values[34], field.values[35]
+		, field.values[36], field.values[37], field.values[38], field.values[39], field.values[40], field.values[41], field.values[42], field.values[43], field.values[44]
+		, field.values[45], field.values[46], field.values[47], field.values[48], field.values[49], field.values[50], field.values[51], field.values[52], field.values[53]
+		, field.values[54], field.values[55], field.values[56], field.values[57], field.values[58], field.values[59], field.values[60], field.values[61], field.values[62]
+		, field.values[63], field.values[64], field.values[65], field.values[66], field.values[67], field.values[68], field.values[69], field.values[70], field.values[71]
+		, field.values[72], field.values[73], field.values[74], field.values[75], field.values[76], field.values[77], field.values[78], field.values[79], field.values[80]
+		);
+}
+void printField(FILE *out, Field< Position > const &field)
+{
+	printField(out, convert(field));
+}
 // return all indices in the same row as index, excluding index itself
 vector< int > getRow(int const index)
 {
-	int curr_index(index / 9);
+	int curr_index((index / 9) * 9);
 	vector< int > retval(9);
 	generate(retval.begin(), retval.end(), [&](){ return curr_index++; });
 	retval.erase(retval.begin() + (index % 9));
+	
+	assert(retval.size() == 8);
+	
 	return retval;
 }
 // return all indices in the same column as index, excluding index itself
@@ -86,6 +117,9 @@ vector< int > getColumn(int const index)
 	vector< int > retval(9);
 	generate(retval.begin(), retval.end(), [&](){ int retval(curr_index); curr_index += 9; return retval; });
 	retval.erase(retval.begin() + (index / 9));
+	
+	assert(retval.size() == 8);
+	
 	return retval;
 }
 // return all indices in the same cell as index, excluding index itself
@@ -103,6 +137,7 @@ vector< int > getCell(int const index, bool include_seed = false)
 		{ /* not this one */ }
 	}
 	assert(retval.size() == (include_seed ? 9 : 8));
+
 	return retval;
 }
 bool solved(Position const &position)
@@ -148,7 +183,7 @@ Field< Position > simpleSolve(Field< Position > field)
 	}
 	return field;
 }
-vector< Position > values(Field< Position > const &field, vector< int > const &indices)
+vector< Position > getValues(Field< Position > const &field, vector< int > const &indices)
 {
 	vector< Position > retval;
 	for(auto index : indices)
@@ -157,7 +192,21 @@ vector< Position > values(Field< Position > const &field, vector< int > const &i
 	}
 	return retval;
 }
-Field< Position > promote(Field< Position > field, int index, int value)
+bool sameRow(int lhs, int rhs)
+{
+	return ((lhs / 9) == (rhs / 9));
+}
+bool sameColumn(int lhs, int rhs)
+{
+	return ((lhs % 9) == (rhs % 9));
+}
+bool sameCell(int lhs, int rhs)
+{
+	return ((lhs / 3) % 3) == ((rhs / 3) % 3)
+		&& (lhs / 27) == (rhs / 27)
+		;
+}
+Field< Position > promote_(Field< Position > field, int index, int value)
 {
 	for (int i(0); i < 9; ++i)
 	{
@@ -165,89 +214,115 @@ Field< Position > promote(Field< Position > field, int index, int value)
 	}
 	return field;
 }
-bool sameCell(int lhs, int rhs)
-{
-	return ((lhs / 3) % 3) == ((rhs / 3) % 3)
-		&& (lhs / 27) == (rhs / 27)
-		;
-
-}
-Field< Position > reduce(Field< Position > field, int cell, int value)
+Field< Position > promote(Field< Position > field, int cell, int value)
 {
 	auto cellmates(getCell(cell, true));
-	auto cell_values(values(field, cellmates));
-	vector< int > cells_with_value_as_candidate;
+	auto values(getValues(field, cellmates));
+	vector< int > positions_with_value_as_candidate;
 	assert(cellmates.size() == 9);
-	assert(cell_values.size() == 9);
+	assert(values.size() == 9);
 	for (int i(0); i < 9; ++i)
 	{
-		if (cell_values[i].candidates[value])
+		if (values[i].candidates[value])
 		{
-			cells_with_value_as_candidate.push_back(i);
+			positions_with_value_as_candidate.push_back(i);
 		}
 		else
 		{ /* not a candidate here */ }
 	}
-	// if cells_with_value_as_candidate == 1, promote the cell in question in the field
-	if (cells_with_value_as_candidate.size() == 1)
+	if (positions_with_value_as_candidate.size() == 1)
 	{
-		auto the_index(cellmates[cells_with_value_as_candidate[0]]);
-		field = promote(field, the_index, value);
+		auto the_index(cellmates[positions_with_value_as_candidate[0]]);
+		field = promote_(field, the_index, value);
 	}
 	else
-	{	// otherwise, for each candidate, check whether it's on the same {row, column} as every other candidate.
-		// If so, we can update positions outside the current cell on the same {row,column} to remove the candidacy
-		bool all_same_row(true);
-		bool all_same_column(true);
-		for (auto lhs : cells_with_value_as_candidate)
-		{
-			for (auto rhs : cells_with_value_as_candidate)
-			{
-				all_same_row &= ((lhs / 9) == (rhs / 9));
-				all_same_column &= ((lhs % 9) == (rhs % 9));
-			}
-		}
-		if (all_same_row)
-		{
-			auto const same_row(getRow(cells_with_value_as_candidate[0]));
-			// remove anything in the same cell
-			vector< int > same_row_not_same_cell;
-			copy_if(
-				  same_row.begin()
-				, same_row.end()
-				, back_inserter(same_row_not_same_cell)
-				, [=](int index){
-						return !sameCell(cells_with_value_as_candidate[0], index);
-					}
-				);
-			for (auto index : same_row_not_same_cell)
-			{
-				field.values[index].candidates[value] = false;
-			}
-		}
-		else
-		{ /* not all the same row */ }
-		if (all_same_column)
-		{
-			auto const same_column(getColumn(cells_with_value_as_candidate[0]));
-			// remove anything in the same cell
-			vector< int > same_column_not_same_cell;
-			copy_if(
-				  same_column.begin()
-				, same_column.end()
-				, back_inserter(same_column_not_same_cell)
-				, [=](int index){
-						return !sameCell(cells_with_value_as_candidate[0], index);
-					}
-				);
-			for (auto index : same_column_not_same_cell)
-			{
-				field.values[index].candidates[value] = false;
-			}
-		}
-		else
-		{ /* not all the same column */ }
+	{ /* can't promote this value */ }
+	return field;
+}
+Field< Position > promote(Field< Position > field, int cell)
+{
+	for (int i(0); i < 9; ++i)
+	{
+		field = promote(field, cell, i);
 	}
+	return field;
+}
+Field< Position > promote(Field< Position > field)
+{
+	for (int i : {0, 3, 6, 27, 30, 33, 54, 57, 60})
+	{
+		field = promote(field, i);
+	}
+	return field;
+}
+Field< Position > reduce(Field< Position > field, int cell, int value)
+{
+	auto cellmates(getCell(cell, true));
+	auto values(getValues(field, cellmates));
+	vector< int > positions_with_value_as_candidate;
+	assert(cellmates.size() == 9);
+	assert(values.size() == 9);
+	for (int i(0); i < 9; ++i)
+	{
+		if (values[i].candidates[value])
+		{
+			positions_with_value_as_candidate.push_back(cellmates[i]);
+		}
+		else
+		{ /* not a candidate here */ }
+	}
+	assert(!positions_with_value_as_candidate.empty());
+	
+	bool all_same_row(true);
+	for_each(
+		  positions_with_value_as_candidate.begin() + 1
+		, positions_with_value_as_candidate.end()
+		, [&](int position){ all_same_row &= sameRow(positions_with_value_as_candidate.front(), position); }
+		);
+	if (all_same_row)
+	{
+		auto entire_row(getRow(positions_with_value_as_candidate.front()));
+		decltype(entire_row) row_outside_cell;
+		copy_if(
+			  entire_row.begin()
+			, entire_row.end()
+			, back_inserter(row_outside_cell)
+			, [=](int position){ return !sameCell(positions_with_value_as_candidate.front(), position); }
+			);
+		for_each(
+			  row_outside_cell.begin()
+			, row_outside_cell.end()
+			, [&](int position){ field.values[position].candidates[value] = false; }
+			);
+	}
+	else
+	{ /* not all in the same row */ }
+	
+	bool all_same_column(true);
+	for_each(
+		  positions_with_value_as_candidate.begin() + 1
+		, positions_with_value_as_candidate.end()
+		, [&](int position){ all_same_column &= sameColumn(positions_with_value_as_candidate.front(), position); }
+		);
+	if (all_same_column)
+	{
+		auto entire_column(getColumn(positions_with_value_as_candidate.front()));
+		decltype(entire_column) column_outside_cell;
+		copy_if(
+			  entire_column.begin()
+			, entire_column.end()
+			, back_inserter(column_outside_cell)
+			, [=](int position){ return !sameCell(positions_with_value_as_candidate.front(), position); }
+			);
+		for_each(
+			  column_outside_cell.begin()
+			, column_outside_cell.end()
+			, [&](int position){ field.values[position].candidates[value] = false; }
+			);
+	}
+	else
+	{ /* not all in the same column */ }
+	
 	return field;
 }
 Field< Position > reduce(Field< Position > field, int cell)
@@ -260,7 +335,7 @@ Field< Position > reduce(Field< Position > field, int cell)
 }
 Field< Position > reduce(Field< Position > field)
 {
-	for (int i : {0, 3, 9, 27, 30, 33, 54, 57, 60})
+	for (int i : {0, 3, 6, 27, 30, 33, 54, 57, 60})
 	{
 		field = reduce(field, i);
 	}
@@ -268,6 +343,7 @@ Field< Position > reduce(Field< Position > field)
 }
 Field< Position > solve(Field< Position > field)
 {
+unsigned int step(1);
 	// we will continue to try to solve this as long as we're making progress and haven't completely solved it
 	while (!solved(field))
 	{
@@ -278,14 +354,30 @@ Field< Position > solve(Field< Position > field)
 			field = simpleSolve(field);
 			auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			if (prev_solved == curr_solved) break; // no longer making progress
+fprintf(stderr, "step %u output:\n", step++);
+printField(stderr, field);
 		}
+fprintf(stderr, "Done with simple solve\n");
+		while (!solved(field))
+		{
+			auto const prev_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
+			field = promote(field);
+			auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
+			if (prev_solved == curr_solved) break; // no longer making progress
+fprintf(stderr, "step %u output:\n", step++);
+printField(stderr, field);
+		}
+fprintf(stderr, "done with promotion\n");
 		while (!solved(field))
 		{
 			auto const prev_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			field = reduce(field);
 			auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			if (prev_solved == curr_solved) break; // no longer making progress
+fprintf(stderr, "step %u output:\n", step++);
+printField(stderr, field);
 		}
+fprintf(stderr, "done with reduction\n");
 		auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 		if (solved_at_start == curr_solved) break; // no longer making progress
 	}
@@ -297,6 +389,7 @@ Field< int > solve(Field< int > const &field)
 }
 
 int example[] = {
+#if 0
 	  5, 3, 0,  0, 7, 0,  0, 0, 0
 	, 6, 0, 0,  1, 9, 5,  0, 0, 0
 	, 0, 9, 8,  0, 0, 0,  0, 6, 0
@@ -308,56 +401,38 @@ int example[] = {
 	, 0, 6, 0,  0, 0, 0,  2, 8, 0
 	, 0, 0, 0,  4, 1, 9,  0, 0, 5
 	, 0, 0, 0,  0, 8, 0,  0, 7, 9
+#endif
+	  9, 4, 3,  0, 8, 2,  1, 6, 0
+	, 0, 1, 6,  0, 4, 5,  9, 8, 2
+	, 2, 0, 0,  1, 0, 6,  3, 4, 7
+	
+	, 0, 8, 5,  0, 0, 3,  0, 9, 0
+	, 0, 0, 9,  0, 0, 7,  0, 5, 0
+	, 0, 3, 0,  8, 0, 0,  0, 2, 6
+	
+	, 8, 0, 0,  5, 2, 0,  6, 0, 0
+	, 0, 0, 0,  0, 0, 0,  5, 0, 8
+	, 5, 0, 0,  6, 0, 8,  2, 0, 0
 	};
+void test_getCell()
+{
+	for (auto i : { 0, 3, 6, 27, 30, 33, 54, 57, 60 })
+	{
+		auto cellmates(getCell(i, true));
+		fprintf(stderr, "Cellmates for %d: %d %d %d %d %d %d %d %d %d\n", i
+			, cellmates[0], cellmates[1], cellmates[2], cellmates[3], cellmates[4], cellmates[5], cellmates[6], cellmates[7], cellmates[8]);
+	}
+}
 int main()
 {
+	Field< int > input_field;
+	copy(begin(example), end(example), begin(input_field.values));
 	Field< int > field;
 	copy(begin(example), end(example), begin(field.values));
+	printf("input:\n");
+	printField(stdout, input_field);
 	field = solve(field);
 	printf("The solver %s the puzzle!\n", solved(field) ? "solved" : "failed to solve");
-	printf(
-		  "input: \n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "output: \n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		  "\t%d %d %d   %d %d %d   %d %d %d\n"
-		, example[ 0], example[ 1], example[ 2], example[ 3], example[ 4], example[ 5], example[ 6], example[ 7], example[ 8]
-		, example[ 9], example[10], example[11], example[12], example[13], example[14], example[15], example[16], example[17]
-		, example[18], example[19], example[20], example[21], example[22], example[23], example[24], example[25], example[26]
-		, example[27], example[28], example[29], example[30], example[31], example[32], example[33], example[34], example[35]
-		, example[36], example[37], example[38], example[39], example[40], example[41], example[42], example[43], example[44]
-		, example[45], example[46], example[47], example[48], example[49], example[50], example[51], example[52], example[53]
-		, example[54], example[55], example[56], example[57], example[58], example[59], example[60], example[61], example[62]
-		, example[63], example[64], example[65], example[66], example[67], example[68], example[69], example[70], example[71]
-		, example[72], example[73], example[74], example[75], example[76], example[77], example[78], example[79], example[80]
-
-		, field.values[ 0], field.values[ 1], field.values[ 2], field.values[ 3], field.values[ 4], field.values[ 5], field.values[ 6], field.values[ 7], field.values[ 8]
-		, field.values[ 9], field.values[10], field.values[11], field.values[12], field.values[13], field.values[14], field.values[15], field.values[16], field.values[17]
-		, field.values[18], field.values[19], field.values[20], field.values[21], field.values[22], field.values[23], field.values[24], field.values[25], field.values[26]
-		, field.values[27], field.values[28], field.values[29], field.values[30], field.values[31], field.values[32], field.values[33], field.values[34], field.values[35]
-		, field.values[36], field.values[37], field.values[38], field.values[39], field.values[40], field.values[41], field.values[42], field.values[43], field.values[44]
-		, field.values[45], field.values[46], field.values[47], field.values[48], field.values[49], field.values[50], field.values[51], field.values[52], field.values[53]
-		, field.values[54], field.values[55], field.values[56], field.values[57], field.values[58], field.values[59], field.values[60], field.values[61], field.values[62]
-		, field.values[63], field.values[64], field.values[65], field.values[66], field.values[67], field.values[68], field.values[69], field.values[70], field.values[71]
-		, field.values[72], field.values[73], field.values[74], field.values[75], field.values[76], field.values[77], field.values[78], field.values[79], field.values[80]
-		);
+	printf("output:\n");
+	printField(stdout, field);
 }
