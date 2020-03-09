@@ -15,17 +15,6 @@ struct Position
 {
 	bool candidates[9];
 };
-int convert(Position position)
-{
-	if (count(begin(position.candidates), end(position.candidates), true) == 1)
-	{
-		return distance(begin(position.candidates), find(begin(position.candidates), end(position.candidates), true)) + 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
 Field< Position > convert(Field< int > const &field)
 {
 	Field< Position > retval;
@@ -41,12 +30,12 @@ Field< Position > convert(Field< int > const &field)
 				{
 				case 0 :
 				{
-					bool candidates[] = { true, true, true, true, true, true, true, true, true };
+					bool const candidates[] = { true, true, true, true, true, true, true, true, true };
 					copy(begin(candidates), end(candidates), begin(position.candidates));
 					break;
 				}
 				default :
-					bool candidates[] = { false, false, false, false, false, false, false, false, false };
+					bool const candidates[] = { false, false, false, false, false, false, false, false, false };
 					copy(begin(candidates), end(candidates), begin(position.candidates));
 					position.candidates[value - 1] = true;
 					break;
@@ -55,6 +44,17 @@ Field< Position > convert(Field< int > const &field)
 			}
 		);
 	return retval;
+}
+int convert(Position position)
+{
+	if (count(begin(position.candidates), end(position.candidates), true) == 1)
+	{
+		return distance(begin(position.candidates), find(begin(position.candidates), end(position.candidates), true)) + 1;
+	}
+	else
+	{
+		return 0;
+	}
 }
 Field< int > convert(Field< Position > const &field)
 {
@@ -354,30 +354,21 @@ unsigned int step(1);
 			field = simpleSolve(field);
 			auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			if (prev_solved == curr_solved) break; // no longer making progress
-fprintf(stderr, "step %u output:\n", step++);
-printField(stderr, field);
 		}
-fprintf(stderr, "Done with simple solve\n");
 		while (!solved(field))
 		{
 			auto const prev_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			field = promote(field);
 			auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			if (prev_solved == curr_solved) break; // no longer making progress
-fprintf(stderr, "step %u output:\n", step++);
-printField(stderr, field);
 		}
-fprintf(stderr, "done with promotion\n");
 		while (!solved(field))
 		{
 			auto const prev_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			field = reduce(field);
 			auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 			if (prev_solved == curr_solved) break; // no longer making progress
-fprintf(stderr, "step %u output:\n", step++);
-printField(stderr, field);
 		}
-fprintf(stderr, "done with reduction\n");
 		auto const curr_solved(count_if(begin(field.values), end(field.values), [](Position position){ return solved(position); }));
 		if (solved_at_start == curr_solved) break; // no longer making progress
 	}
@@ -402,6 +393,7 @@ int example[] = {
 	, 0, 0, 0,  4, 1, 9,  0, 0, 5
 	, 0, 0, 0,  0, 8, 0,  0, 7, 9
 #endif
+#if 0
 	  9, 4, 3,  0, 8, 2,  1, 6, 0
 	, 0, 1, 6,  0, 4, 5,  9, 8, 2
 	, 2, 0, 0,  1, 0, 6,  3, 4, 7
@@ -413,16 +405,32 @@ int example[] = {
 	, 8, 0, 0,  5, 2, 0,  6, 0, 0
 	, 0, 0, 0,  0, 0, 0,  5, 0, 8
 	, 5, 0, 0,  6, 0, 8,  2, 0, 0
+#endif
+#if 0
+	  0, 0, 0,  0, 9, 0,  1, 2, 5
+	, 0, 1, 0,  5, 6, 2,  0, 0, 9
+	, 0, 5, 0,  0, 0, 0,  4, 6, 0
+	
+	, 7, 0, 0,  0, 4, 6,  0, 0, 0
+	, 5, 0, 2,  1, 8, 7,  9, 0, 3
+	, 9, 0, 8,  2, 3, 5,  6, 1, 0
+	
+	, 0, 0, 5,  0, 0, 0,  3, 7, 0
+	, 6, 2, 0,  0, 1, 3,  0, 0, 0
+	, 1, 0, 3,  7, 0, 0,  0, 0, 0
+#endif
+	  8, 0, 2,  0, 0, 0,  0, 0, 3
+	, 0, 5, 0,  1, 0, 0,  9, 0, 0
+	, 0, 0, 0,  0, 0, 8,  4, 0, 0
+	
+	, 0, 0, 0,  0, 0, 0,  0, 0, 0
+	, 0, 0, 8,  0, 0, 0,  0, 2, 6
+	, 1, 7, 0,  0, 0, 0,  5, 0, 0
+	
+	, 0, 0, 0,  0, 0, 4,  1, 0, 0
+	, 0, 6, 9,  0, 8, 0,  0, 0, 7
+	, 3, 0, 4,  7, 6, 0,  0, 0, 9
 	};
-void test_getCell()
-{
-	for (auto i : { 0, 3, 6, 27, 30, 33, 54, 57, 60 })
-	{
-		auto cellmates(getCell(i, true));
-		fprintf(stderr, "Cellmates for %d: %d %d %d %d %d %d %d %d %d\n", i
-			, cellmates[0], cellmates[1], cellmates[2], cellmates[3], cellmates[4], cellmates[5], cellmates[6], cellmates[7], cellmates[8]);
-	}
-}
 int main()
 {
 	Field< int > input_field;
