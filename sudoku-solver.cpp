@@ -15,6 +15,14 @@ struct Position
 {
 	bool candidates[9];
 };
+
+// check whether a given position is solved (only one candidate is left)
+bool solved(Position const &position)
+{
+	return count(begin(position.candidates), end(position.candidates), true) == 1;
+}
+
+// converts a field of integers (the usual, human-readable way of representing the puzzle) to Positions. Unknown values expected to be represented as 0 in the input
 Field< Position > convert(Field< int > const &field)
 {
 	Field< Position > retval;
@@ -45,9 +53,10 @@ Field< Position > convert(Field< int > const &field)
 		);
 	return retval;
 }
-int convert(Position position)
+// Converts a single position to its integer representation. Unknown values are returned as 0
+int convert(Position const &position)
 {
-	if (count(begin(position.candidates), end(position.candidates), true) == 1)
+	if (solved(position))
 	{
 		return distance(begin(position.candidates), find(begin(position.candidates), end(position.candidates), true)) + 1;
 	}
@@ -56,6 +65,7 @@ int convert(Position position)
 		return 0;
 	}
 }
+// Converts our internal representation of the field to a more human-friendly one
 Field< int > convert(Field< Position > const &field)
 {
 	Field< int > retval;
@@ -140,10 +150,6 @@ vector< int > getCell(int const index, bool include_seed = false)
 
 	return retval;
 }
-bool solved(Position const &position)
-{
-	return count(begin(position.candidates), end(position.candidates), true) == 1;
-}
 
 bool solved(Field< Position > const &field)
 {
@@ -161,26 +167,28 @@ bool solved(Field< int > const &field)
 	return count(begin(field.values), end(field.values), 0) == 0;
 }
 
+// For any cell that is solved, remove its value as a candidate for its siblings (positions on the same row, column, or in the same cell)
 Field< Position > simpleSolve(Field< Position > field)
 {
 	for (int i(0); i < 81; ++i)
 	{
-		if (solved(field.values[i])) continue;
-		auto row_siblings(getRow(i));
-		auto column_siblings(getColumn(i));
-		auto cell_siblings(getCell(i));
-		set< int > siblings;
-		siblings.insert(row_siblings.begin(), row_siblings.end());
-		siblings.insert(column_siblings.begin(), column_siblings.end());
-		siblings.insert(cell_siblings.begin(), cell_siblings.end());
-		for (auto sibling : siblings)
+		if (solved(field.values[i]))
 		{
-			if (solved(field.values[sibling]))
+			auto row_siblings(getRow(i));
+			auto column_siblings(getColumn(i));
+			auto cell_siblings(getCell(i));
+			set< int > siblings;
+			siblings.insert(row_siblings.begin(), row_siblings.end());
+			siblings.insert(column_siblings.begin(), column_siblings.end());
+			siblings.insert(cell_siblings.begin(), cell_siblings.end());
+			auto const value(convert(field,values[i]));
+			for (auto sibling : siblings)
 			{
-				field.values[i].candidates[convert(field.values[sibling]) - 1] = false;
+				field.values[sibling].candidates[value - 1] = false;
 			}
 		}
 	}
+	
 	return field;
 }
 vector< Position > getValues(Field< Position > const &field, vector< int > const &indices)
@@ -206,7 +214,8 @@ bool sameCell(int lhs, int rhs)
 		&& (lhs / 27) == (rhs / 27)
 		;
 }
-Field< Position > promote_(Field< Position > field, int index, int value)
+// set a given index in the field to a given value
+Field< Position > setValue(Field< Position > field, int index, int value)
 {
 	for (int i(0); i < 9; ++i)
 	{
@@ -214,6 +223,8 @@ Field< Position > promote_(Field< Position > field, int index, int value)
 	}
 	return field;
 }
+// find any position within a cell to have a given value as candidate. If there is only one in the cell, it must be that cell that has that value (for example, if within a cell there is only one position that can have value 8, that position must therefore have value 8)
+// note the value parameter is thr human value minus 1 here (so 1 => 0, 2 => 1, etc.)
 Field< Position > promote(Field< Position > field, int cell, int value)
 {
 	auto cellmates(getCell(cell, true));
@@ -233,7 +244,7 @@ Field< Position > promote(Field< Position > field, int cell, int value)
 	if (positions_with_value_as_candidate.size() == 1)
 	{
 		auto the_index(cellmates[positions_with_value_as_candidate[0]]);
-		field = promote_(field, the_index, value);
+		field = setValue(field, the_index, value);
 	}
 	else
 	{ /* can't promote this value */ }
@@ -255,6 +266,7 @@ Field< Position > promote(Field< Position > field)
 	}
 	return field;
 }
+
 Field< Position > reduce(Field< Position > field, int cell, int value)
 {
 	auto cellmates(getCell(cell, true));
@@ -273,6 +285,7 @@ Field< Position > reduce(Field< Position > field, int cell, int value)
 	}
 	assert(!positions_with_value_as_candidate.empty());
 	
+	// check if all the candidates we found for the calue we're currently looking for are on the same row. If so, they can be removed outside the cell in the same row
 	bool all_same_row(true);
 	for_each(
 		  positions_with_value_as_candidate.begin() + 1
@@ -298,6 +311,7 @@ Field< Position > reduce(Field< Position > field, int cell, int value)
 	else
 	{ /* not all in the same row */ }
 	
+	// same thing for columns
 	bool all_same_column(true);
 	for_each(
 		  positions_with_value_as_candidate.begin() + 1
@@ -341,9 +355,10 @@ Field< Position > reduce(Field< Position > field)
 	}
 	return field;
 }
+
 Field< Position > solve(Field< Position > field)
 {
-unsigned int step(1);
+	unsigned int step(1);
 	// we will continue to try to solve this as long as we're making progress and haven't completely solved it
 	while (!solved(field))
 	{
